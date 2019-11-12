@@ -48,6 +48,3 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
-
-# Unity meta files
-*.meta
