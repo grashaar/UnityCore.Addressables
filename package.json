@@ -1,0 +1,22 @@
+﻿{
+    "name": "com.grashaar.unity-core-addressables",
+    "displayName": "Unity Core Addressables",
+    "version": "0.0.1",
+    "unity": "2019.1",
+	"license": "MIT",
+    "description": "Core extensions for building Unity games",
+    "keywords": [
+        "core",
+        "unity",
+        "addressables"
+    ],
+    "category": "Unity",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/grashaar/UnityCore.Addressables.git"
+	},
+	"author": "Grashaar <grashaar@outlook.com> (https://github.com/grashaar)",
+	"dependencies": {
+        "com.unity.addressables": "1.3.8"
+    }
+}
