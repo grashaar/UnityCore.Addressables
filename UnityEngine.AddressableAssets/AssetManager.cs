@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,26 +7,26 @@ namespace UnityEngine.AddressableAssets
 {
     public static class AssetManager
     {
-        private static readonly Dictionary<string, UnityEngine.Object> _assets = new Dictionary<string, UnityEngine.Object>();
+        private static readonly Dictionary<string, Object> _assets = new Dictionary<string, Object>();
 
         private static readonly List<string> _keys = new List<string>();
 
-        private static readonly string[] _filters = new string[] { "\n", "\r" };
+        private static readonly string[] _filters = new[] { "\n", "\r" };
 
         public static bool isReady { get; set; }
 
-        public static bool ContainsAsset(string address)
-            => _assets.ContainsKey(address) && _assets[address] != null;
+        public static bool ContainsAsset(string key)
+            => _assets.ContainsKey(key) && _assets[key] != null;
 
-        public static bool ContainsAddress(string address)
-            => _keys.Contains(address);
+        public static bool ContainsKey(string key)
+            => _keys.Contains(key);
 
         public static IEnumerator Initialize()
         {
-            var initializer = Addressables.InitializeAsync();
-            yield return initializer;
+            var operation = Addressables.InitializeAsync();
+            yield return operation;
 
-            var keys = initializer.Result.Keys.ToArray();
+            var keys = operation.Result.Keys.ToArray();
 
             for (var i = 0; i < keys.Length; i += 2)
             {
@@ -33,54 +34,81 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        public static IEnumerator Load<T>(string address) where T : UnityEngine.Object
+        public static IEnumerator Load<T>(string key) where T : Object
         {
             for (var i = 0; i < _filters.Length; i++)
             {
-                address = address.Replace(_filters[i], string.Empty);
+                key = key.Replace(_filters[i], string.Empty);
             }
 
-            if (!_assets.ContainsKey(address))
+            if (!_assets.ContainsKey(key))
             {
-                var handle = Addressables.LoadAssetAsync<T>(address);
+                var handle = Addressables.LoadAssetAsync<T>(key);
                 yield return handle;
 
-                if (handle.Result == null)
+                if (handle.Result is T result)
                 {
-                    Debug.LogError($"Cannot load any asset by address={address}");
+                    _assets.Add(key, result);
                 }
                 else
                 {
-                    _assets.Add(address, handle.Result);
+                    Debug.LogError($"Cannot load any asset of type {typeof(T)} by key={key}.");
                 }
             }
         }
 
-        public static T Get<T>(string address) where T : UnityEngine.Object
+        public static IEnumerator Load<T>(string key, Action<string, T> callback) where T : Object
         {
-            if (!_assets.ContainsKey(address))
+            if (!_assets.ContainsKey(key))
             {
-                Debug.LogWarning($"Cannot find any asset by address={address}");
+                var handle = Addressables.LoadAssetAsync<T>(key);
+                yield return handle;
+
+                if (handle.Result is T result)
+                {
+                    _assets.Add(key, result);
+                    callback?.Invoke(key, result);
+                }
+                else
+                {
+                    Debug.LogError($"Cannot load any asset of type {typeof(T)} by key={key}.");
+                }
+            }
+            else if (_assets[key] is T result)
+            {
+                callback?.Invoke(key, result);
+            }
+            else
+            {
+                Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
+            }
+        }
+
+        public static T Get<T>(string key) where T : Object
+        {
+            if (!_assets.ContainsKey(key))
+            {
+                Debug.LogWarning($"Cannot find any asset by key={key}.");
                 return default;
             }
 
-            var asset = _assets[address];
+            var asset = _assets[key];
 
             if (asset is T assetT)
                 return assetT;
 
-            Debug.LogWarning($"The asset with address={address} is not an instance of {typeof(T)}");
+            Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
             return default;
         }
 
-        public static IEnumerator<GameObject> Instantiate(string address)
+        public static IEnumerator<GameObject> Instantiate(string key)
         {
             for (var i = 0; i < _filters.Length; i++)
             {
-                address = address.Replace(_filters[i], string.Empty);
+                key = key.Replace(_filters[i], string.Empty);
             }
 
-            var handle = Addressables.InstantiateAsync(address);
+            var handle = Addressables.InstantiateAsync(key);
 
             while (!handle.IsDone)
                 yield return null;
