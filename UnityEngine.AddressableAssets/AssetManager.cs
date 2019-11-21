@@ -5,6 +5,8 @@ using System.Linq;
 
 namespace UnityEngine.AddressableAssets
 {
+    using ResourceManagement.AsyncOperations;
+
     public static class AssetManager
     {
         private static readonly Dictionary<string, Object> _assets = new Dictionary<string, Object>();
@@ -84,6 +86,34 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
+        public static void LoadAsync<T>(string key, Action<string, T> callback) where T : Object
+        {
+            if (!_assets.ContainsKey(key))
+            {
+                var operation = Addressables.LoadAssetAsync<T>(key);
+                operation.Completed += handle => OnCompleted(handle, key, callback);
+                return;
+            }
+
+            if (_assets[key] is T result)
+            {
+                callback?.Invoke(key, result);
+            }
+            else
+            {
+                Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
+            }
+        }
+
+        private static void OnCompleted<T>(AsyncOperationHandle<T> handle, string key, Action<string, T> callback) where T : Object
+        {
+            if (handle.Status != AsyncOperationStatus.Succeeded)
+                return;
+
+            _assets.Add(key, handle.Result);
+            callback?.Invoke(key, handle.Result);
+        }
+
         public static T Get<T>(string key) where T : Object
         {
             if (!_assets.ContainsKey(key))
@@ -99,6 +129,15 @@ namespace UnityEngine.AddressableAssets
 
             Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
             return default;
+        }
+
+        public static void Unload(string key)
+        {
+            if (!_assets.TryGetValue(key, out var asset))
+                return;
+
+            _assets.Remove(key);
+            Addressables.Release(asset);
         }
 
         public static IEnumerator<GameObject> Instantiate(string key)
