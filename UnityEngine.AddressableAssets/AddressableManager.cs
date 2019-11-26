@@ -7,7 +7,7 @@ namespace UnityEngine.AddressableAssets
 {
     using ResourceManagement.AsyncOperations;
 
-    public static class AssetManager
+    public static class AddressableManager
     {
         private static readonly Dictionary<string, Object> _assets = new Dictionary<string, Object>();
 
