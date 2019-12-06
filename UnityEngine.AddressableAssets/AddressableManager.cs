@@ -154,23 +154,34 @@ namespace UnityEngine.AddressableAssets
 
         private static void OnLoadAssetCompleted<T>(AsyncOperationHandle<T> handle, string key, Action<string, T> onSucceeded = null, Action<string> onFailed = null) where T : Object
         {
-            if (handle.Status == AsyncOperationStatus.Succeeded)
-            {
-                if (handle.Result is T result)
-                {
-                    _assets.Add(key, result);
-                    onSucceeded?.Invoke(key, result);
-                }
-                else
-                {
-                    Debug.LogError($"Cannot load any asset of type {typeof(T)} by key={key}.");
-                    onFailed?.Invoke(key);
-                }
-            }
-            else if (handle.Status == AsyncOperationStatus.Failed)
+            if (handle.Status != AsyncOperationStatus.Succeeded)
             {
                 onFailed?.Invoke(key);
+                return;
             }
+
+            if (!(handle.Result is T result))
+            {
+                Debug.LogError($"Cannot load any asset of type {typeof(T)} by key={key}.");
+                onFailed?.Invoke(key);
+                return;
+            }
+
+            if (_assets.ContainsKey(key))
+            {
+                if (!(_assets[key] is T))
+                {
+                    Debug.LogError($"An asset of type={_assets[key].GetType()} has been already registered with key={key}.");
+                    onFailed?.Invoke(key);
+                    return;
+                }
+            }
+            else
+            {
+                _assets.Add(key, result);
+            }
+
+            onSucceeded?.Invoke(key, result);
         }
 
         public static T GetAsset<T>(string key) where T : Object
