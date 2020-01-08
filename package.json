@@ -17,6 +17,7 @@
   },
   "author": "Grashaar <grashaar@outlook.com> (https://github.com/grashaar)",
   "dependencies": {
-    "com.unity.addressables": "1.3.8"
+    "com.unity.addressables": "1.3.8",
+    "com.cysharp.unitask": "https://grashaar@github.com/grashaar/UniTask.git#0.0.1"
   }
 }

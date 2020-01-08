@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.SceneManagement;
+using UniRx.Async;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -12,11 +13,11 @@ namespace UnityEngine.AddressableAssets
 
     public static class AddressableManager
     {
-        private static readonly Dictionary<string, AsyncOperationHandle> _assets
-            = new Dictionary<string, AsyncOperationHandle>();
+        private static readonly Dictionary<string, Object> _assets
+            = new Dictionary<string, Object>();
 
-        private static readonly Dictionary<string, AsyncOperationHandle<SceneInstance>> _scenes
-            = new Dictionary<string, AsyncOperationHandle<SceneInstance>>();
+        private static readonly Dictionary<string, SceneInstance> _scenes
+            = new Dictionary<string, SceneInstance>();
 
         private static readonly List<string> _keys = new List<string>();
 
@@ -25,7 +26,7 @@ namespace UnityEngine.AddressableAssets
         public static bool isReady { get; set; }
 
         public static bool ContainsAsset(string key)
-            => _assets.ContainsKey(key) && _assets[key].Result != null;
+            => _assets.ContainsKey(key) && _assets[key];
 
         public static bool ContainsKey(string key)
             => _keys.Contains(key);
@@ -96,7 +97,7 @@ namespace UnityEngine.AddressableAssets
 
                 OnLoadAssetCompleted(handle, key);
             }
-            else if (!(_assets[key] is AsyncOperationHandle<T>))
+            else if (!(_assets[key] is T))
             {
                 Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
             }
@@ -113,9 +114,9 @@ namespace UnityEngine.AddressableAssets
 
                 OnLoadAssetCompleted(handle, key, onSucceeded, onFailed);
             }
-            else if (_assets[key] is AsyncOperationHandle<T> assetHandle)
+            else if (_assets[key] is T asset)
             {
-                onSucceeded?.Invoke(key, assetHandle.Result);
+                onSucceeded?.Invoke(key, asset);
             }
             else
             {
@@ -135,7 +136,7 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
-            if (!(_assets[key] is AsyncOperationHandle<T>))
+            if (!(_assets[key] is T))
             {
                 Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
             }
@@ -152,9 +153,9 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
-            if (_assets[key] is AsyncOperationHandle<T> assetHandle)
+            if (_assets[key] is T asset)
             {
-                onSucceeded?.Invoke(key, assetHandle.Result);
+                onSucceeded?.Invoke(key, asset);
             }
             else
             {
@@ -171,7 +172,7 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
-            if (!(handle.Result is T result))
+            if (!handle.Result)
             {
                 Debug.LogError($"Cannot load any asset of type {typeof(T)} by key={key}.");
                 onFailed?.Invoke(key);
@@ -180,22 +181,22 @@ namespace UnityEngine.AddressableAssets
 
             if (_assets.ContainsKey(key))
             {
-                if (!(_assets[key] is AsyncOperationHandle<T>))
+                if (!(_assets[key] is T))
                 {
-                    Debug.LogError($"An asset of type={_assets[key].Result.GetType()} has been already registered with key={key}.");
+                    Debug.LogError($"An asset of type={_assets[key].GetType()} has been already registered with key={key}.");
                     onFailed?.Invoke(key);
                     return;
                 }
             }
             else
             {
-                _assets.Add(key, handle);
+                _assets.Add(key, handle.Result);
             }
 
-            onSucceeded?.Invoke(key, result);
+            onSucceeded?.Invoke(key, handle.Result);
         }
 
-        public static AsyncOperationHandle<T> LoadAssetAsync<T>(string key) where T : Object
+        public static async UniTask<T> LoadAssetAsync<T>(string key) where T : Object
         {
             key = GuardKey(key);
 
@@ -204,16 +205,17 @@ namespace UnityEngine.AddressableAssets
                 var operation = Addressables.LoadAssetAsync<T>(key);
                 operation.Completed += handle => OnLoadAssetCompleted(handle, key);
 
-                return operation;
+                await operation.Task;
+                return operation.Result;
             }
 
-            if (!(_assets[key] is AsyncOperationHandle<T> assetHandle))
+            if (!(_assets[key] is T asset))
             {
                 Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
                 return default;
             }
 
-            return assetHandle;
+            return asset;
         }
 
         public static T GetAsset<T>(string key) where T : Object
@@ -226,8 +228,8 @@ namespace UnityEngine.AddressableAssets
                 return default;
             }
 
-            if (_assets[key] is AsyncOperationHandle<T> assetHandle)
-                return assetHandle.Result;
+            if (_assets[key] is T asset)
+                return asset;
 
             Debug.LogWarning($"The asset with key={key} is not an instance of {typeof(T)}.");
             return default;
@@ -257,7 +259,7 @@ namespace UnityEngine.AddressableAssets
             }
             else
             {
-                onSucceeded?.Invoke(_scenes[key].Result.Scene);
+                onSucceeded?.Invoke(_scenes[key].Scene);
             }
         }
 
@@ -273,14 +275,14 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
-            onSucceeded?.Invoke(_scenes[key].Result.Scene);
+            onSucceeded?.Invoke(_scenes[key].Scene);
         }
 
         private static void OnLoadSceneCompleted(AsyncOperationHandle<SceneInstance> handle, string key, Action<Scene> onSucceeded = null, Action<string> onFailed = null)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
-                _scenes.Add(key, handle);
+                _scenes.Add(key, handle.Result);
                 onSucceeded?.Invoke(handle.Result.Scene);
             }
             else if (handle.Status == AsyncOperationStatus.Failed)
@@ -289,7 +291,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        public static AsyncOperationHandle<SceneInstance> LoadSceneAsync(string key,
+        public static async UniTask<SceneInstance> LoadSceneAsync(string key,
             LoadSceneMode loadMode, bool activeOnLoad = true, int priority = 100)
         {
             key = GuardKey(key);
@@ -299,13 +301,14 @@ namespace UnityEngine.AddressableAssets
                 var operation = Addressables.LoadSceneAsync(key, loadMode, activeOnLoad, priority);
                 operation.Completed += handle => OnLoadSceneCompleted(handle, key);
 
-                return operation;
+                await operation.Task;
+                return operation.Result;
             }
 
-            return default;
+            return _scenes[key];
         }
 
-        public static void UnloadScene(string key)
+        public static void UnloadScene(string key, bool autoReleaseHandle = true)
         {
             key = GuardKey(key);
 
@@ -313,10 +316,11 @@ namespace UnityEngine.AddressableAssets
                 return;
 
             _scenes.Remove(key);
-            Addressables.UnloadSceneAsync(scene);
+            Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
         }
 
-        public static IEnumerator UnloadSceneCoroutine(string key, Action<string> onSucceeded, Action<string> onFailed = null)
+        public static IEnumerator UnloadSceneCoroutine(string key, bool autoReleaseHandle = true,
+            Action<string> onSucceeded = null, Action<string> onFailed = null)
         {
             key = GuardKey(key);
 
@@ -324,7 +328,7 @@ namespace UnityEngine.AddressableAssets
             {
                 _scenes.Remove(key);
 
-                var operation = Addressables.UnloadSceneAsync(scene);
+                var operation = Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
                 yield return operation;
 
                 OnUnloadSceneCompleted(operation, key, onSucceeded, onFailed);
@@ -335,7 +339,8 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        public static void UnloadScene(string key, Action<string> onSucceeded, Action<string> onFailed = null)
+        public static void UnloadScene(string key, bool autoReleaseHandle = true,
+            Action<string> onSucceeded = null, Action<string> onFailed = null)
         {
             key = GuardKey(key);
 
@@ -343,7 +348,7 @@ namespace UnityEngine.AddressableAssets
             {
                 _scenes.Remove(key);
 
-                var operation = Addressables.UnloadSceneAsync(scene);
+                var operation = Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
                 operation.Completed += handle => OnUnloadSceneCompleted(handle, key, onSucceeded, onFailed);
                 return;
             }
@@ -363,7 +368,7 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        public static AsyncOperationHandle<SceneInstance> UnloadSceneAsync(string key, bool autoReleaseHandle = true)
+        public static async UniTask<SceneInstance> UnloadSceneAsync(string key, bool autoReleaseHandle = true)
         {
             key = GuardKey(key);
 
@@ -371,7 +376,9 @@ namespace UnityEngine.AddressableAssets
             {
                 _scenes.Remove(key);
 
-                return Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
+                var operation = Addressables.UnloadSceneAsync(scene, autoReleaseHandle);
+                await operation.Task;
+                return operation.Result;
             }
 
             return default;
@@ -412,12 +419,14 @@ namespace UnityEngine.AddressableAssets
             operation.Completed += handle => callback?.Invoke(handle.Result);
         }
 
-        public static AsyncOperationHandle<GameObject> InstantiateAsync(string key,
+        public static async UniTask<GameObject> InstantiateAsync(string key,
             Transform parent = null, bool instantiateInWorldSpace = false, bool trackHandle = true)
         {
             key = GuardKey(key);
 
-            return Addressables.InstantiateAsync(key, parent, instantiateInWorldSpace, trackHandle);
+            var operation = Addressables.InstantiateAsync(key, parent, instantiateInWorldSpace, trackHandle);
+            await operation.Task;
+            return operation.Result;
         }
 
         private static string GuardKey(string key)
