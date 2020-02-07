@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine.SceneManagement;
 using UniRx.Async;
 
@@ -19,20 +18,38 @@ namespace UnityEngine.AddressableAssets
         private static readonly Dictionary<string, SceneInstance> _scenes
             = new Dictionary<string, SceneInstance>();
 
-        private static readonly List<string> _keys = new List<string>();
+        private static readonly List<object> _keys = new List<object>();
 
         private static readonly string[] _filters = new[] { "\n", "\r" };
 
         public static bool isReady { get; set; }
 
+        public static IReadOnlyList<object> Keys
+            => _keys;
+
         public static bool ContainsAsset(string key)
             => _assets.ContainsKey(key) && _assets[key];
 
-        public static bool ContainsKey(string key)
+        public static bool ContainsKey(object key)
             => _keys.Contains(key);
+
+        public static void Initialize()
+        {
+            _keys.Clear();
+            var operation = Addressables.InitializeAsync();
+            operation.Completed += handle => OnInitializeCompleted(handle);
+        }
+
+        public static void Initialize(Action onSucceeded, Action onFailed = null)
+        {
+            _keys.Clear();
+            var operation = Addressables.InitializeAsync();
+            operation.Completed += handle => OnInitializeCompleted(handle, onSucceeded, onFailed);
+        }
 
         public static IEnumerator InitializeCoroutine()
         {
+            _keys.Clear();
             var operation = Addressables.InitializeAsync();
             yield return operation;
 
@@ -41,49 +58,33 @@ namespace UnityEngine.AddressableAssets
 
         public static IEnumerator InitializeCoroutine(Action onSucceeded, Action onFailed = null)
         {
+            _keys.Clear();
             var operation = Addressables.InitializeAsync();
             yield return operation;
 
             OnInitializeCompleted(operation, onSucceeded, onFailed);
         }
 
-        public static void Initialize()
+        public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
         {
+            _keys.Clear();
             var operation = Addressables.InitializeAsync();
             operation.Completed += handle => OnInitializeCompleted(handle);
-        }
 
-        public static void Initialize(Action onSucceeded, Action onFailed = null)
-        {
-            var operation = Addressables.InitializeAsync();
-            operation.Completed += handle => OnInitializeCompleted(handle, onSucceeded, onFailed);
+            return operation;
         }
 
         private static void OnInitializeCompleted(AsyncOperationHandle<IResourceLocator> handle, Action onSucceeded = null, Action onFailed = null)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
-                var keys = handle.Result.Keys.ToArray();
-
-                for (var i = 0; i < keys.Length; i += 2)
-                {
-                    _keys.Add(keys[i].ToString());
-                }
-
+                _keys.AddRange(handle.Result.Keys);
                 onSucceeded?.Invoke();
             }
             else if (handle.Status == AsyncOperationStatus.Failed)
             {
                 onFailed?.Invoke();
             }
-        }
-
-        public static AsyncOperationHandle<IResourceLocator> InitializeAsync()
-        {
-            var operation = Addressables.InitializeAsync();
-            operation.Completed += handle => OnInitializeCompleted(handle);
-
-            return operation;
         }
 
         public static IEnumerator LoadAssetCoroutine<T>(string key) where T : Object
