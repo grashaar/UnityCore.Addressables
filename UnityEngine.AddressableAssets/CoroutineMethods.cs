@@ -175,17 +175,10 @@ namespace UnityEngine.AddressableAssets
         {
             key = GuardKey(key);
 
-            if (_instances.ContainsKey(key))
-            {
-                onSucceeded?.Invoke(key, _instances[key]);
-            }
-            else
-            {
-                var operation = Addressables.InstantiateAsync(key, parent, inWorldSpace, trackHandle);
-                yield return operation;
+            var operation = Addressables.InstantiateAsync(key, parent, inWorldSpace, trackHandle);
+            yield return operation;
 
-                OnInstantiateCompleted(operation, key, onSucceeded, onFailed);
-            }
+            OnInstantiateCompleted(operation, key, onSucceeded, onFailed);
         }
 
         public static IEnumerator InstantiateCoroutine(AssetReference assetReference,
@@ -200,18 +193,10 @@ namespace UnityEngine.AddressableAssets
             else
             {
                 var key = assetReference.RuntimeKey.ToString();
+                var operation = assetReference.InstantiateAsync(parent, inWorldSpace);
+                yield return operation;
 
-                if (_instances.ContainsKey(key))
-                {
-                    onSucceeded?.Invoke(key, _instances[key]);
-                }
-                else
-                {
-                    var operation = assetReference.InstantiateAsync(parent, inWorldSpace);
-                    yield return operation;
-
-                    OnInstantiateCompleted(operation, key, onSucceeded, onFailed);
-                }
+                OnInstantiateCompleted(operation, key, onSucceeded, onFailed);
             }
         }
     }

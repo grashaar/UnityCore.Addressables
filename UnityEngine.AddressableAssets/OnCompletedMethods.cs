@@ -103,11 +103,6 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
-            if (!_instances.ContainsKey(key))
-            {
-                _instances.Add(key, handle.Result);
-            }
-
             onSucceeded?.Invoke(key, handle.Result);
         }
 
