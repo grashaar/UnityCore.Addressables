@@ -11,7 +11,6 @@ namespace UnityEngine.AddressableAssets
         private static readonly List<IResourceLocation> _noLocation;
         private static readonly Dictionary<string, List<IResourceLocation>> _locations;
         private static readonly Dictionary<string, Object> _assets;
-        private static readonly Dictionary<string, GameObject> _instances;
         private static readonly Dictionary<string, SceneInstance> _scenes;
         private static readonly List<object> _keys;
         private static readonly string[] _filters;
@@ -24,7 +23,6 @@ namespace UnityEngine.AddressableAssets
             _noLocation = new List<IResourceLocation>();
             _locations = new Dictionary<string, List<IResourceLocation>>();
             _assets = new Dictionary<string, Object>();
-            _instances = new Dictionary<string, GameObject>();
             _scenes = new Dictionary<string, SceneInstance>();
             _keys = new List<object>();
             _filters = new[] { "\n", "\r" };
@@ -154,9 +152,6 @@ namespace UnityEngine.AddressableAssets
         {
             key = GuardKey(key);
 
-            if (_instances.ContainsKey(key))
-                return;
-
             var operation = Addressables.InstantiateAsync(key, parent, inWorldSpace, trackHandle);
             operation.Completed += handle => OnInstantiateCompleted(handle, key);
         }
@@ -170,10 +165,6 @@ namespace UnityEngine.AddressableAssets
             }
 
             var key = assetReference.RuntimeKey.ToString();
-
-            if (_instances.ContainsKey(key))
-                return;
-
             var operation = assetReference.InstantiateAsync(parent, inWorldSpace);
             operation.Completed += handle => OnInstantiateCompleted(handle, key);
         }
@@ -233,34 +224,6 @@ namespace UnityEngine.AddressableAssets
             assetReference.ReleaseAsset();
         }
 
-        public static void UnloadInstance(string key)
-        {
-            key = GuardKey(key);
-
-            if (!_instances.TryGetValue(key, out var instance))
-                return;
-
-            _instances.Remove(key);
-            Addressables.ReleaseInstance(instance);
-        }
-
-        public static void UnloadInstance(AssetReference assetReference)
-        {
-            if (assetReference == null)
-            {
-                Debug.LogException(new System.ArgumentNullException(nameof(assetReference)));
-                return;
-            }
-
-            var key = assetReference.RuntimeKey.ToString();
-
-            if (!_instances.TryGetValue(key, out var instance))
-                return;
-
-            _instances.Remove(key);
-            assetReference.ReleaseInstance(instance);
-        }
-
         private static string GuardKey(string key)
         {
             var guardedKey = key ?? string.Empty;
@@ -278,7 +241,6 @@ namespace UnityEngine.AddressableAssets
             _keys.Clear();
             _locations.Clear();
             _assets.Clear();
-            _instances.Clear();
         }
     }
 }

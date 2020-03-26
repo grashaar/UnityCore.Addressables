@@ -173,9 +173,6 @@ namespace UnityEngine.AddressableAssets
         {
             key = GuardKey(key);
 
-            if (_instances.ContainsKey(key))
-                return new AsyncResult<GameObject>(true, _instances[key]);
-
             var operation = Addressables.InstantiateAsync(key, parent, inWorldSpace, trackHandle);
             await operation.Task;
 
@@ -193,10 +190,6 @@ namespace UnityEngine.AddressableAssets
             }
 
             var key = assetReference.RuntimeKey.ToString();
-
-            if (_instances.ContainsKey(key))
-                return new AsyncResult<GameObject>(true, _instances[key]);
-
             var operation = assetReference.InstantiateAsync(parent, inWorldSpace);
             await operation.Task;
 

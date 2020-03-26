@@ -156,12 +156,6 @@ namespace UnityEngine.AddressableAssets
         {
             key = GuardKey(key);
 
-            if (_instances.ContainsKey(key))
-            {
-                onSucceeded?.Invoke(key, _instances[key]);
-                return;
-            }
-
             var operation = Addressables.InstantiateAsync(key, parent, inWorldSpace, trackHandle);
             operation.Completed += handle => OnInstantiateCompleted(handle, key, onSucceeded, onFailed);
         }
@@ -176,13 +170,6 @@ namespace UnityEngine.AddressableAssets
             }
 
             var key = assetReference.RuntimeKey.ToString();
-
-            if (_instances.ContainsKey(key))
-            {
-                onSucceeded?.Invoke(key, _instances[key]);
-                return;
-            }
-
             var operation = assetReference.InstantiateAsync(parent, inWorldSpace);
             operation.Completed += handle => OnInstantiateCompleted(handle, key, onSucceeded, onFailed);
         }
