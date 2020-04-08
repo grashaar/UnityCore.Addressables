@@ -1,5 +1,5 @@
-﻿using UnityEngine.SceneManagement;
-using UniRx.Async;
+﻿using System.Threading.Tasks;
+using UnityEngine.SceneManagement;
 
 namespace UnityEngine.AddressableAssets
 {
@@ -10,24 +10,30 @@ namespace UnityEngine.AddressableAssets
     public readonly struct AsyncResult<T>
     {
         public readonly bool Succeeded;
-        public readonly T Result;
+        public readonly T Value;
 
-        public AsyncResult(bool succeeded, T result)
+        public AsyncResult(bool succeeded, T value)
         {
             this.Succeeded = succeeded;
-            this.Result = result;
+            this.Value = value;
+        }
+
+        public AsyncResult(AsyncOperationStatus status, T value)
+        {
+            this.Succeeded = status == AsyncOperationStatus.Succeeded;
+            this.Value = value;
         }
 
         public static implicit operator AsyncResult<T>(AsyncOperationHandle<T> handle)
-            => new AsyncResult<T>(handle.Status == AsyncOperationStatus.Succeeded, handle.Result);
+            => new AsyncResult<T>(handle.Status, handle.Result);
 
         public static implicit operator T(in AsyncResult<T> result)
-            => result.Result;
+            => result.Value;
     }
 
     public static partial class AddressableManager
     {
-        public static async UniTask<AsyncResult<IResourceLocator>> InitializeAsync()
+        public static async Task<AsyncResult<IResourceLocator>> InitializeAsync()
         {
             Clear();
 
@@ -38,7 +44,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<object>> LoadLocationsAsync(object key)
+        public static async Task<AsyncResult<object>> LoadLocationsAsync(object key)
         {
             if (key == null)
                 return new AsyncResult<object>(false, key);
@@ -50,7 +56,7 @@ namespace UnityEngine.AddressableAssets
             return new AsyncResult<object>(operation.Status == AsyncOperationStatus.Succeeded, key);
         }
 
-        public static async UniTask<AsyncResult<T>> LoadAssetAsync<T>(string key) where T : Object
+        public static async Task<AsyncResult<T>> LoadAssetAsync<T>(string key) where T : Object
         {
             key = GuardKey(key);
 
@@ -70,7 +76,7 @@ namespace UnityEngine.AddressableAssets
             return default;
         }
 
-        public static async UniTask<AsyncResult<T>> LoadAssetAsync<T>(AssetReferenceT<T> assetReference) where T : Object
+        public static async Task<AsyncResult<T>> LoadAssetAsync<T>(AssetReferenceT<T> assetReference) where T : Object
         {
             if (assetReference == null)
             {
@@ -96,7 +102,7 @@ namespace UnityEngine.AddressableAssets
             return default;
         }
 
-        public static async UniTask<AsyncResult<SceneInstance>> LoadSceneAsync(string key,
+        public static async Task<AsyncResult<SceneInstance>> LoadSceneAsync(string key,
             LoadSceneMode loadMode, bool activeOnLoad = true, int priority = 100)
         {
             key = GuardKey(key);
@@ -111,7 +117,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<SceneInstance>> LoadSceneAsync(AssetReference assetReference,
+        public static async Task<AsyncResult<SceneInstance>> LoadSceneAsync(AssetReference assetReference,
             LoadSceneMode loadMode, bool activeOnLoad = true, int priority = 100)
         {
             if (assetReference == null)
@@ -132,7 +138,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<SceneInstance>> UnloadSceneAsync(string key, bool autoReleaseHandle = true)
+        public static async Task<AsyncResult<SceneInstance>> UnloadSceneAsync(string key, bool autoReleaseHandle = true)
         {
             key = GuardKey(key);
 
@@ -147,7 +153,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<SceneInstance>> UnloadSceneAsync(AssetReference assetReference)
+        public static async Task<AsyncResult<SceneInstance>> UnloadSceneAsync(AssetReference assetReference)
         {
             if (assetReference == null)
             {
@@ -168,7 +174,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<GameObject>> InstantiateAsync(string key,
+        public static async Task<AsyncResult<GameObject>> InstantiateAsync(string key,
             Transform parent = null, bool inWorldSpace = false, bool trackHandle = true)
         {
             key = GuardKey(key);
@@ -180,7 +186,7 @@ namespace UnityEngine.AddressableAssets
             return operation;
         }
 
-        public static async UniTask<AsyncResult<GameObject>> InstantiateAsync(AssetReference assetReference,
+        public static async Task<AsyncResult<GameObject>> InstantiateAsync(AssetReference assetReference,
             Transform parent = null, bool inWorldSpace = false)
         {
             if (assetReference == null)

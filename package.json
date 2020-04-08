@@ -1,7 +1,7 @@
 {
   "name": "com.grashaar.unity-core-addressables",
   "displayName": "Unity Core Addressables",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "unity": "2019.1",
   "license": "MIT",
   "description": "Core extensions for building Unity games",
@@ -17,7 +17,6 @@
   },
   "author": "Grashaar <grashaar@outlook.com> (https://github.com/grashaar)",
   "dependencies": {
-    "com.unity.addressables": "1.6.0",
-    "com.cysharp.unitask": "https://grashaar@github.com/grashaar/UniTask.git#0.0.1"
+    "com.unity.addressables": "1.6.0"
   }
 }

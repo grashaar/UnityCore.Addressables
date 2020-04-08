@@ -2,8 +2,7 @@
     "name": "UnityCore.Addressables",
     "references": [
         "Unity.Addressables",
-        "Unity.ResourceManager",
-        "UniRx.Async"
+        "Unity.ResourceManager"
     ],
     "optionalUnityReferences": [],
     "includePlatforms": [],
