@@ -11,7 +11,8 @@ namespace UnityEngine.AddressableAssets
 
     public static partial class AddressableManager
     {
-        private static void OnInitializeCompleted(AsyncOperationHandle<IResourceLocator> handle, Action onSucceeded = null, Action onFailed = null)
+        private static void OnInitializeCompleted(AsyncOperationHandle<IResourceLocator> handle,
+                                                  Action onSucceeded = null, Action onFailed = null)
         {
             if (handle.Status != AsyncOperationStatus.Succeeded)
             {
@@ -24,7 +25,7 @@ namespace UnityEngine.AddressableAssets
         }
 
         private static void OnLoadLocationsCompleted(AsyncOperationHandle<IList<IResourceLocation>> handle, object key,
-            Action<object> onSucceeded = null, Action<object> onFailed = null)
+                                                     Action<object> onSucceeded = null, Action<object> onFailed = null)
         {
             if (handle.Status != AsyncOperationStatus.Succeeded)
             {
@@ -37,7 +38,9 @@ namespace UnityEngine.AddressableAssets
             foreach (var location in handle.Result)
             {
                 var primaryKey = location.PrimaryKey;
-                primaryKey = GuardKey(primaryKey);
+
+                if (!GuardKey(primaryKey, out primaryKey))
+                    continue;
 
                 if (!_locations.ContainsKey(primaryKey))
                     _locations.Add(primaryKey, new List<IResourceLocation>());
@@ -56,7 +59,9 @@ namespace UnityEngine.AddressableAssets
                 onSucceeded?.Invoke(key);
         }
 
-        private static void OnLoadAssetCompleted<T>(AsyncOperationHandle<T> handle, string key, Action<string, T> onSucceeded = null, Action<string> onFailed = null) where T : Object
+        private static void OnLoadAssetCompleted<T>(AsyncOperationHandle<T> handle, string key,
+                                                    Action<string, T> onSucceeded = null, Action<string> onFailed = null)
+            where T : Object
         {
             if (handle.Status != AsyncOperationStatus.Succeeded)
             {
@@ -88,7 +93,8 @@ namespace UnityEngine.AddressableAssets
             onSucceeded?.Invoke(key, handle.Result);
         }
 
-        private static void OnInstantiateCompleted(AsyncOperationHandle<GameObject> handle, string key, Action<string, GameObject> onSucceeded = null, Action<string> onFailed = null)
+        private static void OnInstantiateCompleted(AsyncOperationHandle<GameObject> handle, string key,
+                                                   Action<string, GameObject> onSucceeded = null, Action<string> onFailed = null)
         {
             if (handle.Status != AsyncOperationStatus.Succeeded)
             {
@@ -103,10 +109,15 @@ namespace UnityEngine.AddressableAssets
                 return;
             }
 
+            if (!_instances.ContainsKey(key))
+                _instances.Add(key, GetInstanceList());
+
+            _instances[key].Add(handle.Result);
             onSucceeded?.Invoke(key, handle.Result);
         }
 
-        private static void OnLoadSceneCompleted(AsyncOperationHandle<SceneInstance> handle, string key, Action<Scene> onSucceeded = null, Action<string> onFailed = null)
+        private static void OnLoadSceneCompleted(AsyncOperationHandle<SceneInstance> handle, string key,
+                                                 Action<Scene> onSucceeded = null, Action<string> onFailed = null)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
@@ -119,7 +130,8 @@ namespace UnityEngine.AddressableAssets
             }
         }
 
-        private static void OnUnloadSceneCompleted(AsyncOperationHandle<SceneInstance> handle, string key, Action<string> onSucceeded, Action<string> onFailed)
+        private static void OnUnloadSceneCompleted(AsyncOperationHandle<SceneInstance> handle, string key,
+                                                   Action<string> onSucceeded, Action<string> onFailed)
         {
             if (handle.Status == AsyncOperationStatus.Succeeded)
             {
